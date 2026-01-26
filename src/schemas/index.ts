@@ -25,17 +25,20 @@ import { IgnoredTermSchema } from './ignored';
  * ```
  */
 export const redaksjonSchemas = {
-  person: PersonSchema,
-  project: ProjectSchema,
-  company: CompanySchema,
-  term: TermSchema,
-  ignored: IgnoredTermSchema,
+    person: PersonSchema,
+    project: ProjectSchema,
+    company: CompanySchema,
+    term: TermSchema,
+    ignored: IgnoredTermSchema,
 };
 
 /**
  * Plural names for directory mapping.
  */
 export const redaksjonPluralNames = {
-  person: 'people',
-  company: 'companies',
+    person: 'people',
+    company: 'companies',
+    term: 'terms',
+    ignored: 'ignored',
+    project: 'projects',
 };
