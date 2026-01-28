@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import {
-  PersonSchema,
-  ProjectSchema,
-  CompanySchema,
-  TermSchema,
-  IgnoredTermSchema,
+    PersonSchema,
+    ProjectSchema,
+    CompanySchema,
+    TermSchema,
+    IgnoredTermSchema,
 } from './schemas';
 
 // Inferred types from schemas
@@ -22,18 +22,18 @@ export type RedaksjonEntityType = 'person' | 'project' | 'company' | 'term' | 'i
 
 // Type-to-directory mapping (for backwards compatibility)
 export const TYPE_TO_DIRECTORY: Record<RedaksjonEntityType, string> = {
-  person: 'people',
-  project: 'projects',
-  company: 'companies',
-  term: 'terms',
-  ignored: 'ignored',
+    person: 'people',
+    project: 'projects',
+    company: 'companies',
+    term: 'terms',
+    ignored: 'ignored',
 };
 
 // Directory-to-type mapping
 export const DIRECTORY_TO_TYPE: Record<string, RedaksjonEntityType> = {
-  people: 'person',
-  projects: 'project',
-  companies: 'company',
-  terms: 'term',
-  ignored: 'ignored',
+    people: 'person',
+    projects: 'project',
+    companies: 'company',
+    terms: 'term',
+    ignored: 'ignored',
 };

@@ -1,4 +1,4 @@
-.env
+.env 
 dist
 node_modules
 *.log
@@ -7,15 +7,5 @@ coverage/
 test/
 output/
 input/
-processed/
-.maloomscan/
 .kodrdriv*
-outdiff
-outlog
-pnpm-workspace.yaml
-package-lock.json
 tsconfig.tsbuildinfo
-tsconfig (1).tsbuildinfo
-*~
-package-lock.json
-.kodrdriv*
