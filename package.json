@@ -49,7 +49,7 @@
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
-    "@theunwalked/overcontext": "^0.0.4",
+    "@theunwalked/overcontext": "^0.0.3",
     "zod": "^3.0.0"
   },
   "devDependencies": {
