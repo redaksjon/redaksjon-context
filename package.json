@@ -50,7 +50,7 @@
   },
   "dependencies": {
     "@theunwalked/overcontext": "^0.0.3",
-    "zod": "^3.0.0"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -71,6 +71,6 @@
     "yaml": "^2.3.0"
   },
   "peerDependencies": {
-    "zod": "^3.0.0"
+    "zod": "^4.3.6"
   }
 }
