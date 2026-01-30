@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { BaseEntitySchema } from '@theunwalked/overcontext';
+import { BaseEntitySchema } from '@utilarium/overcontext';
 
 /**
  * Person entity - named individuals the user frequently mentions.
  */
-export const PersonSchema = BaseEntitySchema.extend({
+export const PersonSchema = BaseEntitySchema.merge(z.object({
     type: z.literal('person'),
   
     firstName: z.string().optional(),
@@ -13,4 +13,4 @@ export const PersonSchema = BaseEntitySchema.extend({
     role: z.string().optional(),                 // e.g., "Manager", "Developer"
     sounds_like: z.array(z.string()).optional(), // Common mishearings
     context: z.string().optional(),              // How user knows them
-});
+}));

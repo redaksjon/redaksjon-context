@@ -16,7 +16,7 @@ import { IgnoredTermSchema } from './ignored';
  * Usage:
  * ```typescript
  * import { redaksjonSchemas } from '@redaksjon/context';
- * import { discoverOvercontext } from '@theunwalked/overcontext';
+ * import { discoverOvercontext } from '@utilarium/overcontext';
  * 
  * const ctx = await discoverOvercontext({
  *   schemas: redaksjonSchemas,

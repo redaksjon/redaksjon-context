@@ -1,6 +1,6 @@
 {
   "name": "@redaksjon/context",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Shared context schemas for redaksjon tools",
   "type": "module",
   "repository": {
@@ -49,8 +49,8 @@
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
-    "@theunwalked/overcontext": "^0.0.3",
-    "zod": "^3.0.0"
+    "@utilarium/overcontext": "^0.0.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -71,6 +71,6 @@
     "yaml": "^2.3.0"
   },
   "peerDependencies": {
-    "zod": "^3.0.0"
+    "zod": "^4.0.0"
   }
 }
