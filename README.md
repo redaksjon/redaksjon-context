@@ -4,12 +4,12 @@ Shared context schemas for redaksjon tools (protokoll, kronologi, and future too
 
 ## Overview
 
-This package provides Zod schemas for redaksjon entity types that are used across multiple tools in the redaksjon ecosystem. It integrates with [@theunwalked/overcontext](https://github.com/theunwalked/utilarium/tree/main/overcontext) for schema-driven context management.
+This package provides Zod schemas for redaksjon entity types that are used across multiple tools in the redaksjon ecosystem. It integrates with [@utilarium/overcontext](https://github.com/utilarium/utilarium/tree/main/overcontext) for schema-driven context management.
 
 ## Installation
 
 ```bash
-npm install @redaksjon/context @theunwalked/overcontext
+npm install @redaksjon/context @utilarium/overcontext
 ```
 
 ## Usage
@@ -18,7 +18,7 @@ npm install @redaksjon/context @theunwalked/overcontext
 
 ```typescript
 import { redaksjonSchemas, redaksjonPluralNames } from '@redaksjon/context';
-import { discoverOvercontext } from '@theunwalked/overcontext';
+import { discoverOvercontext } from '@utilarium/overcontext';
 
 // Discover context with redaksjon schemas
 const ctx = await discoverOvercontext({

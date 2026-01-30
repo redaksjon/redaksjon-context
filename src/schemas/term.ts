@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { BaseEntitySchema } from '@theunwalked/overcontext';
+import { BaseEntitySchema } from '@utilarium/overcontext';
 
 /**
  * Term entity - domain-specific terminology and acronyms.
  */
-export const TermSchema = BaseEntitySchema.extend({
+export const TermSchema = BaseEntitySchema.merge(z.object({
     type: z.literal('term'),
   
     expansion: z.string().optional(),           // Full form if acronym
@@ -13,4 +13,4 @@ export const TermSchema = BaseEntitySchema.extend({
     projects: z.array(z.string()).optional(),   // Associated project IDs
     description: z.string().optional(),
     topics: z.array(z.string()).optional(),
-});
+}));

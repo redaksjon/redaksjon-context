@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BaseEntitySchema } from '@theunwalked/overcontext';
+import { BaseEntitySchema } from '@utilarium/overcontext';
 
 /**
  * Project classification signals.
@@ -36,7 +36,7 @@ export const ProjectRelationshipsSchema = z.object({
 /**
  * Project entity - work contexts that affect routing and understanding.
  */
-export const ProjectSchema = BaseEntitySchema.extend({
+export const ProjectSchema = BaseEntitySchema.merge(z.object({
     type: z.literal('project'),
   
     description: z.string().optional(),
@@ -45,4 +45,4 @@ export const ProjectSchema = BaseEntitySchema.extend({
     sounds_like: z.array(z.string()).optional(),
     relationships: ProjectRelationshipsSchema,
     active: z.boolean().optional(),
-});
+}));

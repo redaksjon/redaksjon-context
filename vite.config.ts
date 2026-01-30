@@ -55,7 +55,7 @@ export default defineConfig({
         },
         rollupOptions: {
             external: [
-                '@theunwalked/overcontext',
+                '@utilarium/overcontext',
                 'zod',
             ],
             output: {
