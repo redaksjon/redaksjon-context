@@ -1,13 +1,15 @@
 import { z } from 'zod';
 import { BaseEntitySchema } from '@utilarium/overcontext';
+import { RelationshipsSchema } from './relationships';
+import { EntityContentSchema } from './content';
 
 /**
  * Project classification signals.
  */
 export const ProjectClassificationSchema = z.object({
     context_type: z.enum(['work', 'personal', 'mixed']),
-    associated_people: z.array(z.string()).optional(),
-    associated_companies: z.array(z.string()).optional(),
+    associated_people: z.array(z.string()).optional(),    // DEPRECATED: Use relationships instead
+    associated_companies: z.array(z.string()).optional(), // DEPRECATED: Use relationships instead
     topics: z.array(z.string()).optional(),
     explicit_phrases: z.array(z.string()).optional(),
 });
@@ -23,17 +25,6 @@ export const ProjectRoutingSchema = z.object({
 });
 
 /**
- * Project relationships.
- */
-export const ProjectRelationshipsSchema = z.object({
-    parent: z.string().optional(),
-    children: z.array(z.string()).optional(),
-    siblings: z.array(z.string()).optional(),
-    dependsOn: z.array(z.string()).optional(),
-    relatedTerms: z.array(z.string()).optional(),
-}).optional();
-
-/**
  * Project entity - work contexts that affect routing and understanding.
  */
 export const ProjectSchema = BaseEntitySchema.merge(z.object({
@@ -43,6 +34,7 @@ export const ProjectSchema = BaseEntitySchema.merge(z.object({
     classification: ProjectClassificationSchema,
     routing: ProjectRoutingSchema,
     sounds_like: z.array(z.string()).optional(),
-    relationships: ProjectRelationshipsSchema,
+    relationships: RelationshipsSchema,                // Unified relationships
+    content: EntityContentSchema,                      // Attached content (URLs, text, documents)
     active: z.boolean().optional(),
 }));

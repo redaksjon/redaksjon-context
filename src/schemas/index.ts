@@ -3,6 +3,8 @@ export * from './project';
 export * from './company';
 export * from './term';
 export * from './ignored';
+export * from './relationships';
+export * from './content';
 
 import { PersonSchema } from './person';
 import { ProjectSchema } from './project';
