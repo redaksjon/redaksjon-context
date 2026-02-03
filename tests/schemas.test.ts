@@ -77,10 +77,16 @@ describe('ProjectSchema', () => {
         structure: 'none',
         filename_options: ['date'],
       },
-      relationships: {
-        parent: 'parent-project',
-        siblings: ['sibling-1'],
-      },
+      relationships: [
+        {
+          uri: 'redaksjon://project/parent-project',
+          relationship: 'parent',
+        },
+        {
+          uri: 'redaksjon://project/sibling-1',
+          relationship: 'sibling',
+        },
+      ],
     });
     expect(result.success).toBe(true);
   });
