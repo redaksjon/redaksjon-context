@@ -57,6 +57,13 @@ export default defineConfig({
             external: [
                 '@utilarium/overcontext',
                 'zod',
+                'js-yaml',
+                'node:fs',
+                'node:fs/promises',
+                'node:path',
+                'fs',
+                'fs/promises',
+                'path',
             ],
             output: {
                 preserveModules: true,
