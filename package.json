@@ -1,6 +1,6 @@
 {
   "name": "@redaksjon/context",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Shared context schemas for redaksjon tools",
   "type": "module",
   "repository": {
@@ -45,17 +45,19 @@
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "clean": "rm -rf dist",
-    "precommit": "npm run lint && npm run test && npm run build",
+    "precommit": "npm run lint && npm run build && npm run test:coverage",
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
     "@utilarium/overcontext": "^0.0.4",
-    "zod": "^4.3.6"
+    "js-yaml": "^4.1.0",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
     "@rollup/plugin-replace": "^6.0.2",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.0.0",
     "@typescript-eslint/eslint-plugin": "^8.20.0",
     "@typescript-eslint/parser": "^8.20.0",
