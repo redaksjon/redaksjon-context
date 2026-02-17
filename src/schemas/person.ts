@@ -8,6 +8,7 @@ import { EntityContentSchema } from './content';
  */
 export const PersonSchema = BaseEntitySchema.merge(z.object({
     type: z.literal('person'),
+    slug: z.string().optional(),  // Human-readable identifier
   
     firstName: z.string().optional(),
     lastName: z.string().optional(),

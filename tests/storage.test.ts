@@ -159,8 +159,15 @@ describe('storage', () => {
             const storage = create();
             await storage.save(person, testDir);
 
+            // Find file with UUID prefix (first 10 chars of id)
+            const peopleDir = path.join(testDir, 'context', 'people');
+            const files = await fs.readdir(peopleDir);
+            const uuidPrefix = 'john-doe'.substring(0, 10);
+            const savedFile = files.find(f => f.startsWith(uuidPrefix) && f.endsWith('.yaml'));
+            expect(savedFile).toBeDefined();
+
             const content = await fs.readFile(
-                path.join(testDir, 'context', 'people', 'john-doe.yaml'),
+                path.join(peopleDir, savedFile!),
                 'utf-8'
             );
 
@@ -198,12 +205,17 @@ describe('storage', () => {
             await storage.save(term, testDir);
             await storage.save(ignored, testDir);
 
-            // Check that files exist
-            await expect(fs.access(path.join(testDir, 'context', 'people', 'p1.yaml'))).resolves.toBeUndefined();
-            await expect(fs.access(path.join(testDir, 'context', 'projects', 'pr1.yaml'))).resolves.toBeUndefined();
-            await expect(fs.access(path.join(testDir, 'context', 'companies', 'c1.yaml'))).resolves.toBeUndefined();
-            await expect(fs.access(path.join(testDir, 'context', 'terms', 't1.yaml'))).resolves.toBeUndefined();
-            await expect(fs.access(path.join(testDir, 'context', 'ignored', 'i1.yaml'))).resolves.toBeUndefined();
+            // Check that files exist with UUID prefix pattern
+            const checkFileExists = async (dir: string, idPrefix: string) => {
+                const files = await fs.readdir(dir);
+                return files.some(f => f.startsWith(idPrefix) && (f.endsWith('.yaml') || f.endsWith('.yml')));
+            };
+
+            expect(await checkFileExists(path.join(testDir, 'context', 'people'), 'p1')).toBe(true);
+            expect(await checkFileExists(path.join(testDir, 'context', 'projects'), 'pr1')).toBe(true);
+            expect(await checkFileExists(path.join(testDir, 'context', 'companies'), 'c1')).toBe(true);
+            expect(await checkFileExists(path.join(testDir, 'context', 'terms'), 't1')).toBe(true);
+            expect(await checkFileExists(path.join(testDir, 'context', 'ignored'), 'i1')).toBe(true);
         });
 
         it('creates directories if they do not exist', async () => {
@@ -217,11 +229,16 @@ describe('storage', () => {
             const storage = create();
             await storage.save(person, newDir);
 
-            const exists = await fs.access(path.join(newDir, 'context', 'people', 'john.yaml'))
-                .then(() => true)
-                .catch(() => false);
-
-            expect(exists).toBe(true);
+            // Check that directory exists and has a file with UUID prefix
+            const peopleDir = path.join(newDir, 'context', 'people');
+            const dirExists = await fs.access(peopleDir).then(() => true).catch(() => false);
+            expect(dirExists).toBe(true);
+            
+            if (dirExists) {
+                const files = await fs.readdir(peopleDir);
+                const hasFile = files.some(f => f.startsWith('john') && f.endsWith('.yaml'));
+                expect(hasFile).toBe(true);
+            }
         });
     });
 
@@ -280,15 +297,15 @@ describe('storage', () => {
         });
 
         it('tries both with and without context subdirectory', async () => {
-            // Create file directly in targetDir/people (not context/people)
+            // Create file directly in targetDir/people (not context/people) with UUID prefix
             await fs.mkdir(path.join(testDir, 'people'), { recursive: true });
             await fs.writeFile(
-                path.join(testDir, 'people', 'john.yaml'),
+                path.join(testDir, 'people', 'john-john.yaml'),
                 'id: john\nname: John\n'
             );
 
             const storage = create();
-            await storage.load([path.join(testDir, 'people')]);
+            await storage.load([testDir]);
 
             const deleted = await storage.delete('person', 'john', testDir);
             expect(deleted).toBe(true);
@@ -526,6 +543,7 @@ describe('storage', () => {
             );
 
             const storage = create();
+            await storage.load([contextDir, contextDir2]);
             const filePath = storage.getEntityFilePath('person', 'john', [contextDir, contextDir2]);
 
             // Should find the one in contextDir2 (last in array)
@@ -545,6 +563,7 @@ describe('storage', () => {
             );
 
             const storage = create();
+            await storage.load([contextDir]);
             const filePath = storage.getEntityFilePath('person', 'john', [contextDir]);
             expect(filePath).toBe(path.join(contextDir, 'people', 'john.yml'));
         });

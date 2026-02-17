@@ -6,6 +6,7 @@ import { BaseEntitySchema } from '@utilarium/overcontext';
  */
 export const IgnoredTermSchema = BaseEntitySchema.merge(z.object({
     type: z.literal('ignored'),
+    slug: z.string().optional(),  // Human-readable identifier
   
     reason: z.string().optional(),
     ignoredAt: z.string().optional(),  // ISO date string

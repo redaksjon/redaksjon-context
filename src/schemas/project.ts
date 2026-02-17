@@ -29,6 +29,7 @@ export const ProjectRoutingSchema = z.object({
  */
 export const ProjectSchema = BaseEntitySchema.merge(z.object({
     type: z.literal('project'),
+    slug: z.string().optional(),  // Human-readable identifier
   
     description: z.string().optional(),
     classification: ProjectClassificationSchema,
