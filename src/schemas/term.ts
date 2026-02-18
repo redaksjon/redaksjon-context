@@ -8,6 +8,7 @@ import { EntityContentSchema } from './content';
  */
 export const TermSchema = BaseEntitySchema.merge(z.object({
     type: z.literal('term'),
+    slug: z.string().optional(),  // Human-readable identifier
   
     expansion: z.string().optional(),           // Full form if acronym
     domain: z.string().optional(),              // E.g., "engineering", "finance"

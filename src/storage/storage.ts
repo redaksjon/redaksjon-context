@@ -11,7 +11,7 @@
 import * as yaml from 'js-yaml';
 import * as fs from 'fs/promises';
 // eslint-disable-next-line no-restricted-imports
-import { existsSync, statSync } from 'fs';
+import { existsSync, statSync, readdirSync } from 'fs';
 import * as path from 'node:path';
 import { RedaksjonEntity as Entity, RedaksjonEntityType as EntityType } from '../types';
 
@@ -44,6 +44,18 @@ const TYPE_TO_DIRECTORY: Record<EntityType, DirectoryName> = {
     'term': 'terms',
     'ignored': 'ignored',
 };
+
+/**
+ * Simple slugify function for generating slugs from names
+ */
+function slugify(text: string): string {
+    return text
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/[\s_-]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
 
 export const create = (): StorageInstance => {
     const entities: Map<EntityType, Map<string, Entity>> = new Map([
@@ -89,12 +101,17 @@ export const create = (): StorageInstance => {
         const dirPath = path.join(targetDir, 'context', dirName);
         await fs.mkdir(dirPath, { recursive: true });
     
-        const filePath = path.join(dirPath, `${entity.id}.yaml`);
+        // Generate filename: {uuid-prefix}-{slug}.yaml
+        const entityWithSlug = entity as Entity & { slug?: string };
+        const uuidPrefix = entity.id.substring(0, 10);
+        const slug = entityWithSlug.slug || slugify(entity.name);
+        const filename = `${uuidPrefix}-${slug}.yaml`;
+        const filePath = path.join(dirPath, filename);
     
         // Remove type from saved YAML (it's inferred from directory)
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { type: _entityType, ...entityWithoutType } = entity;
-        const content = yaml.dump(entityWithoutType, { lineWidth: -1 });
+        const content = yaml.dump(entityWithoutType, { lineWidth: -1, noRefs: true });
         await fs.writeFile(filePath, content, 'utf-8');
     
         entities.get(entity.type)?.set(entity.id, entity);
@@ -103,18 +120,44 @@ export const create = (): StorageInstance => {
     const deleteEntity = async (type: EntityType, id: string, targetDir: string): Promise<boolean> => {
         const dirName = TYPE_TO_DIRECTORY[type];
         
-        // Try both possible locations (with and without 'context' subdirectory)
+        // Resolve ID to UUID if it's a slug
+        const resolvedId = resolveEntityId(type, id);
+        if (!resolvedId) return false;
+        
+        // Try to find file with UUID prefix
+        const uuidPrefix = resolvedId.substring(0, 10);
+        const possibleDirs = [
+            path.join(targetDir, dirName),
+            path.join(targetDir, 'context', dirName),
+        ];
+        
+        for (const dir of possibleDirs) {
+            try {
+                const files = await fs.readdir(dir);
+                for (const file of files) {
+                    if (file.startsWith(uuidPrefix) && (file.endsWith('.yaml') || file.endsWith('.yml'))) {
+                        await fs.unlink(path.join(dir, file));
+                        entities.get(type)?.delete(resolvedId);
+                        return true;
+                    }
+                }
+            } catch {
+                // Directory doesn't exist or can't be read, try next
+            }
+        }
+        
+        // Fallback: try legacy slug-based filenames
         const possiblePaths = [
-            path.join(targetDir, dirName, `${id}.yaml`),
-            path.join(targetDir, dirName, `${id}.yml`),
-            path.join(targetDir, 'context', dirName, `${id}.yaml`),
-            path.join(targetDir, 'context', dirName, `${id}.yml`),
+            path.join(targetDir, dirName, `${resolvedId}.yaml`),
+            path.join(targetDir, dirName, `${resolvedId}.yml`),
+            path.join(targetDir, 'context', dirName, `${resolvedId}.yaml`),
+            path.join(targetDir, 'context', dirName, `${resolvedId}.yml`),
         ];
         
         for (const filePath of possiblePaths) {
             try {
                 await fs.unlink(filePath);
-                entities.get(type)?.delete(id);
+                entities.get(type)?.delete(resolvedId);
                 return true;
             } catch {
                 // File doesn't exist at this path, try next
@@ -127,15 +170,42 @@ export const create = (): StorageInstance => {
     const getEntityFilePath = (type: EntityType, id: string, contextDirs: string[]): string | undefined => {
         const dirName = TYPE_TO_DIRECTORY[type];
         
+        // Resolve ID to UUID if it's a slug
+        const resolvedId = resolveEntityId(type, id);
+        if (!resolvedId) return undefined;
+        
         // Search in reverse order (closest first) to find where the entity is defined
         for (const contextDir of [...contextDirs].reverse()) {
+            const typeDir = path.join(contextDir, dirName);
+            
+            // Check if directory exists
+            if (!existsSync(typeDir)) continue;
+            
+            try {
+                // List all files in directory and find matching UUID prefix
+                const files = readdirSync(typeDir);
+                const uuidPrefix = resolvedId.substring(0, 10);
+                
+                for (const file of files) {
+                    if (file.startsWith(uuidPrefix) && (file.endsWith('.yaml') || file.endsWith('.yml'))) {
+                        const filePath = path.join(typeDir, file);
+                        const stat = statSync(filePath);
+                        if (stat.isFile()) {
+                            return filePath;
+                        }
+                    }
+                }
+            } catch {
+                // Directory read failed, continue
+            }
+            
+            // Fallback: try legacy slug-based filenames
             const possiblePaths = [
-                path.join(contextDir, dirName, `${id}.yaml`),
-                path.join(contextDir, dirName, `${id}.yml`),
+                path.join(contextDir, dirName, `${resolvedId}.yaml`),
+                path.join(contextDir, dirName, `${resolvedId}.yml`),
             ];
             
             for (const filePath of possiblePaths) {
-                // Use sync access check - this is only for CLI, not hot path
                 if (existsSync(filePath)) {
                     const stat = statSync(filePath);
                     if (stat.isFile()) {
@@ -148,8 +218,34 @@ export const create = (): StorageInstance => {
         return undefined;
     };
 
+    /**
+     * Resolve entity ID from UUID or slug
+     * Tries UUID first, then slug lookup
+     */
+    const resolveEntityId = (type: EntityType, identifier: string): string | undefined => {
+        // Try direct UUID lookup first
+        if (entities.get(type)?.has(identifier)) {
+            return identifier;
+        }
+        
+        // Try slug lookup
+        const entityMap = entities.get(type);
+        if (entityMap) {
+            for (const entity of entityMap.values()) {
+                const entityWithSlug = entity as Entity & { slug?: string };
+                if (entityWithSlug.slug === identifier) {
+                    return entity.id;
+                }
+            }
+        }
+        
+        return undefined;
+    };
+
     const get = <T extends Entity>(type: EntityType, id: string): T | undefined => {
-        return entities.get(type)?.get(id) as T | undefined;
+        // Support both UUID and slug lookup
+        const resolvedId = resolveEntityId(type, id);
+        return resolvedId ? entities.get(type)?.get(resolvedId) as T | undefined : undefined;
     };
 
     const getAll = <T extends Entity>(type: EntityType): T[] => {

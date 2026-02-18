@@ -8,6 +8,7 @@ import { EntityContentSchema } from './content';
  */
 export const CompanySchema = BaseEntitySchema.merge(z.object({
     type: z.literal('company'),
+    slug: z.string().optional(),  // Human-readable identifier
   
     fullName: z.string().optional(),
     industry: z.string().optional(),
