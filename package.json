@@ -74,5 +74,8 @@
   },
   "peerDependencies": {
     "zod": "^4.0.0"
+  },
+  "overrides": {
+    "@microsoft/api-extractor": "7.56.3"
   }
 }
