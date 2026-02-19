@@ -1,6 +1,7 @@
 // Export adapter as the primary storage implementation
 export { 
     create,
+    redaksjonFilenameStrategy,
     type StorageInstance,
     type Entity,
     type EntityType 

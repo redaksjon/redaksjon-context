@@ -1,6 +1,7 @@
 import { 
     discoverOvercontext, 
     OvercontextAPI,
+    BaseEntity,
 } from '@utilarium/overcontext';
 import {
     redaksjonSchemas,
@@ -16,8 +17,22 @@ import type {
     RedaksjonEntityType,
 } from '../types';
 // eslint-disable-next-line no-restricted-imports
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, statSync, readdirSync } from 'node:fs';
 import * as path from 'node:path';
+
+/**
+ * Entity filename strategy: first 8 chars of UUID + slug.
+ * Produces filenames like `d00acdc4-gerald-corson.yaml`.
+ * Falls back to entity.id when no slug is present.
+ */
+export const redaksjonFilenameStrategy = (entity: BaseEntity): string => {
+    const slug = (entity as RedaksjonEntity & { slug?: string }).slug;
+    if (slug) {
+        const prefix = entity.id.substring(0, 8);
+        return `${prefix}-${slug}`;
+    }
+    return entity.id;
+};
 
 // Re-export types for backwards compatibility
 export type { Person, Project, Company, Term, IgnoredTerm, RedaksjonEntity };
@@ -99,10 +114,11 @@ export const create = (): StorageInstance => {
                 // parent directories might contain unrelated context data.
                 api = await discoverOvercontext({
                     schemas: redaksjonSchemas,
-                    pluralNames: redaksjonPluralNames, // Use standard names without context/ prefix
+                    pluralNames: redaksjonPluralNames,
                     startDir,
-                    contextDirName: path.basename(lastContextDir), // Use actual context dir name
-                    maxLevels: 1, // Limit discovery to prevent finding unrelated parent contexts
+                    contextDirName: path.basename(lastContextDir),
+                    maxLevels: 1,
+                    filenameStrategy: redaksjonFilenameStrategy,
                 });
       
                 // Load all entities into cache
@@ -211,22 +227,42 @@ export const create = (): StorageInstance => {
         getEntityFilePath(type: EntityType, id: string, contextDirs: string[]): string | undefined {
             const dirName = TYPE_TO_DIRECTORY[type];
             const dirsToSearch = contextDirs.length > 0 ? contextDirs : loadedContextDirs;
+            const entity = cache.get(type)?.get(id);
             
-            // Search in reverse order (closest first) to find where the entity is defined
             for (const contextDir of [...dirsToSearch].reverse()) {
-                const possiblePaths = [
-                    path.join(contextDir, dirName, `${id}.yaml`),
-                    path.join(contextDir, dirName, `${id}.yml`),
-                ];
-                
-                for (const filePath of possiblePaths) {
-                    // Use sync access check - this is only for CLI, not hot path
-                    if (existsSync(filePath)) {
-                        const stat = statSync(filePath);
-                        if (stat.isFile()) {
+                const entityDir = path.join(contextDir, dirName);
+
+                // Try compound filename first (e.g. d00acdc4-gerald-corson.yaml)
+                if (entity) {
+                    const compoundName = redaksjonFilenameStrategy(entity as RedaksjonEntity & { slug?: string });
+                    for (const ext of ['.yaml', '.yml']) {
+                        const filePath = path.join(entityDir, `${compoundName}${ext}`);
+                        if (existsSync(filePath) && statSync(filePath).isFile()) {
                             return filePath;
                         }
                     }
+                }
+
+                // Fall back to direct id-based filename (legacy)
+                for (const ext of ['.yaml', '.yml']) {
+                    const filePath = path.join(entityDir, `${id}${ext}`);
+                    if (existsSync(filePath) && statSync(filePath).isFile()) {
+                        return filePath;
+                    }
+                }
+
+                // Prefix scan as last resort (handles files we haven't cached yet)
+                if (existsSync(entityDir)) {
+                    const prefix = id.substring(0, 8);
+                    try {
+                        const files = readdirSync(entityDir);
+                        const match = files.find(f =>
+                            f.startsWith(prefix) && (f.endsWith('.yaml') || f.endsWith('.yml'))
+                        );
+                        if (match) {
+                            return path.join(entityDir, match);
+                        }
+                    } catch { /* directory read failed */ }
                 }
             }
             
