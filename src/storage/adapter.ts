@@ -2,6 +2,9 @@ import {
     discoverOvercontext, 
     OvercontextAPI,
     BaseEntity,
+    createContext as createOvercontextContext,
+    createFjellGcsProvider,
+    createSchemaRegistry,
 } from '@utilarium/overcontext';
 import {
     redaksjonSchemas,
@@ -16,7 +19,6 @@ import type {
     RedaksjonEntity,
     RedaksjonEntityType,
 } from '../types';
-// eslint-disable-next-line no-restricted-imports
 import { existsSync, statSync, readdirSync } from 'node:fs';
 import * as path from 'node:path';
 
@@ -54,6 +56,16 @@ export interface StorageInstance {
   getEntityFilePath(type: EntityType, id: string, contextDirs: string[]): string | undefined;
 }
 
+export interface GcsStorageOptions {
+    bucketName: string;
+    basePath: string;
+    credentialsFile?: string;
+}
+
+export interface AdapterCreateOptions {
+    gcs?: GcsStorageOptions;
+}
+
 /**
  * Create a storage instance backed by overcontext.
  * Maintains API compatibility with protokoll's existing storage.
@@ -67,7 +79,7 @@ const TYPE_TO_DIRECTORY: Record<EntityType, string> = {
     ignored: 'ignored',
 };
 
-export const create = (): StorageInstance => {
+export const create = (options: AdapterCreateOptions = {}): StorageInstance => {
     // In-memory cache for sync access (matching original behavior)
     const cache = new Map<EntityType, Map<string, Entity>>();
     let api: OvercontextAPI<typeof redaksjonSchemas> | undefined;
@@ -95,31 +107,55 @@ export const create = (): StorageInstance => {
             }
       
             try {
-                // contextDirs are already resolved paths (e.g., /path/to/context or /path/to/.protokoll/context)
-                // We need to determine the parent directory to start overcontext discovery from
-                // The context directory could be at different levels depending on configuration
-                
-                // Take the last (most specific) context dir
-                const lastContextDir = contextDirs[contextDirs.length - 1];
-                
-                // Get the parent directory of the context directory
-                // This will be the directory containing the context/ folder
-                const startDir = path.dirname(lastContextDir);
-                
-                // Create overcontext API with hierarchical discovery
-                // Note: We use 'context' as contextDirName since we're starting from the parent
-                // Use maxLevels: 1 to limit discovery - we've already done hierarchical discovery
-                // in loadHierarchicalConfig and are passing the specific contextDirs we want.
-                // maxLevels: 1 prevents walking too far up the tree in CI environments where
-                // parent directories might contain unrelated context data.
-                api = await discoverOvercontext({
-                    schemas: redaksjonSchemas,
-                    pluralNames: redaksjonPluralNames,
-                    startDir,
-                    contextDirName: path.basename(lastContextDir),
-                    maxLevels: 1,
-                    filenameStrategy: redaksjonFilenameStrategy,
-                });
+                if (options.gcs) {
+                    const registry = createSchemaRegistry();
+                    for (const [type, schema] of Object.entries(redaksjonSchemas)) {
+                        registry.register({
+                            type,
+                            schema,
+                            pluralName: redaksjonPluralNames[type as RedaksjonEntityType] ?? `${type}s`,
+                        });
+                    }
+                    if (options.gcs.credentialsFile && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+                        process.env.GOOGLE_APPLICATION_CREDENTIALS = options.gcs.credentialsFile;
+                    }
+                    const provider = await createFjellGcsProvider({
+                        bucketName: options.gcs.bucketName,
+                        basePath: options.gcs.basePath,
+                        registry,
+                    });
+                    api = createOvercontextContext({
+                        provider,
+                        registry,
+                        schemas: redaksjonSchemas,
+                    });
+                } else {
+                    // contextDirs are already resolved paths (e.g., /path/to/context or /path/to/.protokoll/context)
+                    // We need to determine the parent directory to start overcontext discovery from
+                    // The context directory could be at different levels depending on configuration
+
+                    // Take the last (most specific) context dir
+                    const lastContextDir = contextDirs[contextDirs.length - 1];
+
+                    // Get the parent directory of the context directory
+                    // This will be the directory containing the context/ folder
+                    const startDir = path.dirname(lastContextDir);
+
+                    // Create overcontext API with hierarchical discovery
+                    // Note: We use 'context' as contextDirName since we're starting from the parent
+                    // Use maxLevels: 1 to limit discovery - we've already done hierarchical discovery
+                    // in loadHierarchicalConfig and are passing the specific contextDirs we want.
+                    // maxLevels: 1 prevents walking too far up the tree in CI environments where
+                    // parent directories might contain unrelated context data.
+                    api = await discoverOvercontext({
+                        schemas: redaksjonSchemas,
+                        pluralNames: redaksjonPluralNames,
+                        startDir,
+                        contextDirName: path.basename(lastContextDir),
+                        maxLevels: 1,
+                        filenameStrategy: redaksjonFilenameStrategy,
+                    });
+                }
       
                 // Load all entities into cache
                 for (const type of ['person', 'project', 'company', 'term', 'ignored'] as EntityType[]) {
@@ -225,6 +261,11 @@ export const create = (): StorageInstance => {
         },
     
         getEntityFilePath(type: EntityType, id: string, contextDirs: string[]): string | undefined {
+            if (options.gcs) {
+                // GCS-backed storage does not expose local file paths.
+                return undefined;
+            }
+
             const dirName = TYPE_TO_DIRECTORY[type];
             const dirsToSearch = contextDirs.length > 0 ? contextDirs : loadedContextDirs;
             const entity = cache.get(type)?.get(id);
