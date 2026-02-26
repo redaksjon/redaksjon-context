@@ -72,6 +72,12 @@ export interface CreateOptions {
     configFileName?: string;
     /** Explicit context directories to load entities from (bypasses discovery) */
     contextDirectories?: string[];
+    /** Optional GCS-backed context storage configuration */
+    gcs?: {
+        bucketName: string;
+        basePath: string;
+        credentialsFile?: string;
+    };
 }
 
 /**
@@ -84,7 +90,7 @@ export const create = async (options: CreateOptions = {}): Promise<ContextInstan
         startingDir: options.startingDir,
     };
 
-    const storage = OvercontextAdapter.create();
+    const storage = OvercontextAdapter.create({ gcs: options.gcs });
     let discoveryResult: HierarchicalContextResult = {
         config: {},
         discoveredDirs: [],
@@ -92,8 +98,18 @@ export const create = async (options: CreateOptions = {}): Promise<ContextInstan
     };
 
     const loadContext = async (): Promise<void> => {
-        // If explicit contextDirectories are provided, use them directly
-        if (options.contextDirectories && options.contextDirectories.length > 0) {
+        // GCS mode does not use filesystem discovery.
+        if (options.gcs) {
+            discoveryResult = {
+                config: {},
+                discoveredDirs: [{
+                    path: `gs://${options.gcs.bucketName}/${options.gcs.basePath}`,
+                    level: 0,
+                }],
+                contextDirs: [options.gcs.basePath],
+            };
+        } else if (options.contextDirectories && options.contextDirectories.length > 0) {
+            // If explicit contextDirectories are provided, use them directly
             discoveryResult = {
                 config: {},
                 discoveredDirs: options.contextDirectories.map((dir, index) => ({

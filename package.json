@@ -49,7 +49,8 @@
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
-    "@utilarium/overcontext": "^0.0.7",
+    "@google-cloud/storage": "^7.19.0",
+    "@utilarium/overcontext": "^0.0.8",
     "js-yaml": "^4.1.0",
     "zod": "^4.0.0"
   },
