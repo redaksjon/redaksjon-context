@@ -59,6 +59,7 @@ export interface StorageInstance {
 export interface GcsStorageOptions {
     bucketName: string;
     basePath: string;
+    projectId?: string;
     credentialsFile?: string;
 }
 
@@ -82,6 +83,7 @@ const TYPE_TO_DIRECTORY: Record<EntityType, string> = {
 export const create = (options: AdapterCreateOptions = {}): StorageInstance => {
     // In-memory cache for sync access (matching original behavior)
     const cache = new Map<EntityType, Map<string, Entity>>();
+    const aliasIndex = new Map<EntityType, Map<string, string>>();
     let api: OvercontextAPI<typeof redaksjonSchemas> | undefined;
     let loadedContextDirs: string[] = [];
   
@@ -91,6 +93,48 @@ export const create = (options: AdapterCreateOptions = {}): StorageInstance => {
         cache.set('company', new Map());
         cache.set('term', new Map());
         cache.set('ignored', new Map());
+        aliasIndex.set('person', new Map());
+        aliasIndex.set('project', new Map());
+        aliasIndex.set('company', new Map());
+        aliasIndex.set('term', new Map());
+        aliasIndex.set('ignored', new Map());
+    };
+
+    const registerAlias = (type: EntityType, alias: string, canonicalId: string): void => {
+        const trimmed = alias.trim();
+        if (!trimmed) {
+            return;
+        }
+        aliasIndex.get(type)?.set(trimmed, canonicalId);
+    };
+
+    const resolveEntityId = (type: EntityType, identifier: string): string | undefined => {
+        const trimmed = identifier.trim();
+        if (!trimmed) {
+            return undefined;
+        }
+
+        const entities = cache.get(type);
+        if (entities?.has(trimmed)) {
+            return trimmed;
+        }
+
+        const aliases = aliasIndex.get(type);
+        const directAlias = aliases?.get(trimmed);
+        if (directAlias) {
+            return directAlias;
+        }
+
+        // Support full UUID lookup when filenames use only UUID prefixes.
+        const uuidPrefixMatch = trimmed.match(/^([a-f0-9]{8})/i);
+        if (uuidPrefixMatch) {
+            const byPrefix = aliases?.get(uuidPrefixMatch[1].toLowerCase());
+            if (byPrefix) {
+                return byPrefix;
+            }
+        }
+
+        return undefined;
     };
   
     initCache();
@@ -116,8 +160,13 @@ export const create = (options: AdapterCreateOptions = {}): StorageInstance => {
                             pluralName: redaksjonPluralNames[type as RedaksjonEntityType] ?? `${type}s`,
                         });
                     }
-                    if (options.gcs.credentialsFile && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+                    // Match RiotPlan precedence: explicit config credentials
+                    // should override ambient ADC env for deterministic behavior.
+                    if (options.gcs.credentialsFile) {
                         process.env.GOOGLE_APPLICATION_CREDENTIALS = options.gcs.credentialsFile;
+                    }
+                    if (options.gcs.projectId) {
+                        process.env.GOOGLE_CLOUD_PROJECT = options.gcs.projectId;
                     }
                     const provider = await createFjellGcsProvider({
                         bucketName: options.gcs.bucketName,
@@ -162,6 +211,85 @@ export const create = (options: AdapterCreateOptions = {}): StorageInstance => {
                     const entities = await api.getAll(type);
                     for (const entity of entities) {
                         cache.get(type)?.set(entity.id, entity as Entity);
+                        registerAlias(type, entity.id, entity.id);
+                        const slug = (entity as Entity & { slug?: string }).slug;
+                        if (typeof slug === 'string' && slug.trim().length > 0) {
+                            registerAlias(type, slug, entity.id);
+                        }
+                        const idPrefix = entity.id.match(/^([a-f0-9]{8})/i);
+                        if (idPrefix) {
+                            registerAlias(type, idPrefix[1].toLowerCase(), entity.id);
+                        }
+                        const slugFromName = entity.name
+                            .toLowerCase()
+                            .trim()
+                            .replace(/[^a-z0-9]+/g, '-')
+                            .replace(/-+/g, '-')
+                            .replace(/^-|-$/g, '');
+                        if (slugFromName.length > 0) {
+                            registerAlias(type, slugFromName, entity.id);
+                        }
+                    }
+                }
+
+                // Build UUID-prefix aliases from filenames to support UUID lookups
+                // when some entities still use slug IDs in YAML.
+                if (!options.gcs) {
+                    const allTypeDirs = ['person', 'project', 'company', 'term', 'ignored'] as EntityType[];
+                    for (const type of allTypeDirs) {
+                        const entityMap = cache.get(type);
+                        if (!entityMap || entityMap.size === 0) {
+                            continue;
+                        }
+
+                        const entitiesBySlug = new Map<string, string>();
+                        for (const entity of entityMap.values()) {
+                            const slug = (entity as Entity & { slug?: string }).slug;
+                            if (typeof slug === 'string' && slug.trim().length > 0) {
+                                entitiesBySlug.set(slug.trim(), entity.id);
+                            }
+                            const slugFromName = entity.name
+                                .toLowerCase()
+                                .trim()
+                                .replace(/[^a-z0-9]+/g, '-')
+                                .replace(/-+/g, '-')
+                                .replace(/^-|-$/g, '');
+                            if (slugFromName.length > 0 && !entitiesBySlug.has(slugFromName)) {
+                                entitiesBySlug.set(slugFromName, entity.id);
+                            }
+                            if (!entitiesBySlug.has(entity.id)) {
+                                entitiesBySlug.set(entity.id, entity.id);
+                            }
+                        }
+
+                        const typeDirName = TYPE_TO_DIRECTORY[type];
+                        for (const contextDir of contextDirs) {
+                            const entityDir = path.join(contextDir, typeDirName);
+                            if (!existsSync(entityDir)) {
+                                continue;
+                            }
+                            try {
+                                const files = readdirSync(entityDir);
+                                for (const file of files) {
+                                    if (!file.endsWith('.yaml') && !file.endsWith('.yml')) {
+                                        continue;
+                                    }
+                                    const stem = file.replace(/\.(yaml|yml)$/i, '');
+                                    const prefixedMatch = stem.match(/^([a-f0-9]{8,})-(.+)$/i);
+                                    if (!prefixedMatch) {
+                                        continue;
+                                    }
+                                    const prefix = prefixedMatch[1].toLowerCase();
+                                    const slug = prefixedMatch[2];
+                                    const canonicalId = entitiesBySlug.get(slug);
+                                    if (canonicalId) {
+                                        registerAlias(type, prefix, canonicalId);
+                                    }
+                                }
+                            } catch {
+                                // Skip unreadable entity directories.
+                            }
+                        }
                     }
                 }
             } catch (error) {
@@ -176,7 +304,8 @@ export const create = (options: AdapterCreateOptions = {}): StorageInstance => {
     
         async save(entity: Entity, _targetDir: string, allowUpdate = false): Promise<void> {
             // Check if entity already exists (for duplicate detection)
-            const existing = cache.get(entity.type)?.get(entity.id);
+            const existingId = resolveEntityId(entity.type, entity.id);
+            const existing = existingId ? cache.get(entity.type)?.get(existingId) : undefined;
             if (existing && !allowUpdate) {
                 throw new Error(`Entity with id "${entity.id}" already exists`);
             }
@@ -192,20 +321,31 @@ export const create = (options: AdapterCreateOptions = {}): StorageInstance => {
       
             // Update cache
             cache.get(entity.type)?.set(saved.id, saved as Entity);
+            registerAlias(entity.type, saved.id, saved.id);
+            const savedSlug = (saved as Entity & { slug?: string }).slug;
+            if (typeof savedSlug === 'string' && savedSlug.trim().length > 0) {
+                registerAlias(entity.type, savedSlug, saved.id);
+            }
+            const idPrefix = saved.id.match(/^([a-f0-9]{8})/i);
+            if (idPrefix) {
+                registerAlias(entity.type, idPrefix[1].toLowerCase(), saved.id);
+            }
         },
     
         async delete(type: EntityType, id: string, _targetDir: string): Promise<boolean> {
             if (!api) return false;
-      
-            const deleted = await api.delete(type, id);
+            const resolvedId = resolveEntityId(type, id) || id;
+
+            const deleted = await api.delete(type, resolvedId);
             if (deleted) {
-                cache.get(type)?.delete(id);
+                cache.get(type)?.delete(resolvedId);
             }
             return deleted;
         },
     
         get<T extends Entity>(type: EntityType, id: string): T | undefined {
-            return cache.get(type)?.get(id) as T | undefined;
+            const resolvedId = resolveEntityId(type, id);
+            return resolvedId ? cache.get(type)?.get(resolvedId) as T | undefined : undefined;
         },
     
         getAll<T extends Entity>(type: EntityType): T[] {
