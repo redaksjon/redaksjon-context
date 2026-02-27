@@ -76,6 +76,7 @@ export interface CreateOptions {
     gcs?: {
         bucketName: string;
         basePath: string;
+        projectId?: string;
         credentialsFile?: string;
     };
 }
