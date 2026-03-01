@@ -108,7 +108,10 @@ export const create = (options: AdapterCreateOptions = {}): StorageInstance => {
         aliasIndex.get(type)?.set(trimmed, canonicalId);
     };
 
-    const resolveEntityId = (type: EntityType, identifier: string): string | undefined => {
+    const resolveEntityId = (type: EntityType, identifier: string | null | undefined): string | undefined => {
+        if (identifier == null) {
+            return undefined;
+        }
         const trimmed = identifier.trim();
         if (!trimmed) {
             return undefined;
