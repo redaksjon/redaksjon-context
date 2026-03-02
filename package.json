@@ -1,6 +1,6 @@
 {
   "name": "@redaksjon/context",
-  "version": "0.0.14",
+  "version": "0.0.15-dev.0",
   "description": "Shared context schemas for redaksjon tools",
   "type": "module",
   "repository": {
