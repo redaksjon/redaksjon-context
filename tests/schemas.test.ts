@@ -55,6 +55,18 @@ describe('ProjectSchema', () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it('accepts optional urls list', () => {
+    const result = ProjectSchema.safeParse({
+      id: 'p-urls',
+      name: 'With URLs',
+      type: 'project',
+      urls: ['https://github.com/example'],
+      classification: { context_type: 'work' },
+      routing: { structure: 'month', filename_options: ['date'] },
+    });
+    expect(result.success).toBe(true);
+  });
   
   it('requires classification and routing', () => {
     const result = ProjectSchema.safeParse({
