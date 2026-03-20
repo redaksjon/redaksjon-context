@@ -32,6 +32,8 @@ export const ProjectSchema = BaseEntitySchema.merge(z.object({
     slug: z.string().optional(),  // Human-readable identifier
   
     description: z.string().optional(),
+    /** Related web links (e.g. org homepage, repo, docs). */
+    urls: z.array(z.string()).optional(),
     classification: ProjectClassificationSchema,
     routing: ProjectRoutingSchema,
     sounds_like: z.array(z.string()).optional(),
