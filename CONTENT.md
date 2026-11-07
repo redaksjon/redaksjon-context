@@ -43,16 +43,16 @@ content?: EntityContentItem[];
 ### Company with Website URL
 
 ```yaml
-# companies/wagner-custom-skis.yaml
-id: wagner-custom-skis
-name: Wagner Custom Skis
+# companies/northwind-skis.yaml
+id: northwind-skis
+name: Northwind Skis
 type: company
-fullName: Wagner Custom Skis, Inc.
+fullName: Northwind Skis, Inc.
 industry: Manufacturing
 content:
   - type: url
     title: Company Website
-    content: https://wagnercustomskis.com
+    content: https://northwindskis.example.com
     mimeType: text/uri-list
     source: Manual entry
     timestamp: "2024-01-31T20:00:00Z"
@@ -61,9 +61,9 @@ content:
   - type: text
     title: Company Description
     content: |
-      Wagner Custom Skis is a boutique ski manufacturer based in Telluride, 
-      Colorado. They specialize in handcrafted, custom skis tailored to 
-      individual skiers' preferences and skiing style.
+      Northwind Skis is a boutique ski manufacturer. They specialize in 
+      handcrafted, custom skis tailored to individual skiers' preferences 
+      and skiing style.
     mimeType: text/plain
     source: Company website
     timestamp: "2024-01-31T20:05:00Z"
@@ -106,26 +106,26 @@ content:
 ### Person with LinkedIn Profile
 
 ```yaml
-# people/pete_wagner.yaml
-id: pete_wagner
-name: Pete Wagner
+# people/sam_rivera.yaml
+id: sam_rivera
+name: Sam Rivera
 type: person
-firstName: Pete
-lastName: Wagner
+firstName: Sam
+lastName: Rivera
 role: Founder & CEO
 content:
   - type: url
     title: LinkedIn Profile
-    content: https://linkedin.com/in/petewagner
+    content: https://linkedin.com/in/user
     mimeType: text/uri-list
     source: Manual entry
   
   - type: text
     title: Bio
     content: |
-      Pete Wagner founded Wagner Custom Skis in 2005 after 15 years 
-      of experience in ski manufacturing. He's known for innovative 
-      designs and commitment to sustainability.
+      Sam Rivera founded Northwind Skis after years of experience in 
+      ski manufacturing, and is known for innovative designs and a 
+      commitment to sustainability.
     mimeType: text/plain
     source: Company website
 ```
@@ -229,7 +229,7 @@ import {
 
 // Create a URL content item
 const websiteContent = createUrlContent(
-  'https://wagnercustomskis.com',
+  'https://northwindskis.example.com',
   'Company Website',
   'Manual entry',
   'Official website'
@@ -237,7 +237,7 @@ const websiteContent = createUrlContent(
 
 // Create a text content item
 const descContent = createTextContent(
-  'Wagner Custom Skis is a boutique manufacturer...',
+  'Northwind Skis is a boutique manufacturer...',
   'Company Description',
   'Company website'
 );
@@ -271,14 +271,14 @@ const docContent = createDocumentContent(
 import { Company } from '@redaksjon/context';
 
 const company: Company = {
-  id: 'wagner-custom-skis',
-  name: 'Wagner Custom Skis',
+  id: 'northwind-skis',
+  name: 'Northwind Skis',
   type: 'company',
-  fullName: 'Wagner Custom Skis, Inc.',
+  fullName: 'Northwind Skis, Inc.',
   industry: 'Manufacturing',
   content: [
     createUrlContent(
-      'https://wagnercustomskis.com',
+      'https://northwindskis.example.com',
       'Company Website'
     ),
     createTextContent(
@@ -395,8 +395,8 @@ Content items can be exposed via MCP resources:
 ```typescript
 // Example: Expose entity content as MCP resources
 {
-  uri: "redaksjon://company/wagner-custom-skis/content/website",
-  name: "Wagner Custom Skis - Company Website",
+  uri: "redaksjon://company/northwind-skis/content/website",
+  name: "Northwind Skis - Company Website",
   mimeType: "text/uri-list",
   description: "Official company website"
 }

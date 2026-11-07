@@ -7,7 +7,7 @@ import { z } from 'zod';
  * URIs follow the pattern: redaksjon://{type}/{id}
  * 
  * Examples:
- *   - redaksjon://person/pete_wagner
+ *   - redaksjon://person/sam_rivera
  *   - redaksjon://company/acme-corp
  *   - redaksjon://term/kubernetes
  *   - redaksjon://project/protokoll
