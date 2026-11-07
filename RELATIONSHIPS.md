@@ -12,7 +12,7 @@ redaksjon://{type}/{id}
 ```
 
 Examples:
-- `redaksjon://person/pete_wagner`
+- `redaksjon://person/sam_rivera`
 - `redaksjon://company/acme-corp`
 - `redaksjon://term/kubernetes`
 - `redaksjon://project/protokoll`
@@ -43,12 +43,12 @@ relationships?: EntityRelationship[];
 ### Person → Company Relationship
 
 ```yaml
-# people/pete_wagner.yaml
-id: pete_wagner
-name: Pete Wagner
+# people/sam_rivera.yaml
+id: sam_rivera
+name: Sam Rivera
 type: person
-firstName: Pete
-lastName: Wagner
+firstName: Sam
+lastName: Rivera
 role: Engineering Manager
 relationships:
   - uri: redaksjon://company/acme-corp
@@ -69,7 +69,7 @@ type: company
 fullName: Acme Corporation, Inc.
 industry: Technology
 relationships:
-  - uri: redaksjon://person/pete_wagner
+  - uri: redaksjon://person/sam_rivera
     relationship: employs
     notes: Engineering Manager
   - uri: redaksjon://person/jane_smith
@@ -90,9 +90,9 @@ relationships:
   - uri: redaksjon://project/cloud-migration
     relationship: used_in
     notes: Primary orchestration platform
-  - uri: redaksjon://person/pete_wagner
+  - uri: redaksjon://person/sam_rivera
     relationship: expert
-    notes: Pete is our K8s expert
+    notes: Sam is our K8s expert
 ```
 
 ### Project → Multiple Entity Types
@@ -104,7 +104,7 @@ name: Cloud Migration Project
 type: project
 description: Migrate infrastructure to cloud
 relationships:
-  - uri: redaksjon://person/pete_wagner
+  - uri: redaksjon://person/sam_rivera
     relationship: managed_by
   - uri: redaksjon://company/aws
     relationship: vendor
@@ -157,12 +157,12 @@ import {
 } from '@redaksjon/context';
 
 // Create a URI
-const uri = createEntityUri('person', 'pete_wagner');
-// => "redaksjon://person/pete_wagner"
+const uri = createEntityUri('person', 'sam_rivera');
+// => "redaksjon://person/sam_rivera"
 
 // Parse a URI
-const parsed = parseEntityUri('redaksjon://person/pete_wagner');
-// => { type: 'person', id: 'pete_wagner' }
+const parsed = parseEntityUri('redaksjon://person/sam_rivera');
+// => { type: 'person', id: 'sam_rivera' }
 
 // Create a relationship
 const rel = createRelationship(
@@ -186,16 +186,16 @@ const rel = createRelationship(
 
 **Before:**
 ```yaml
-id: pete_wagner
-name: Pete Wagner
+id: sam_rivera
+name: Sam Rivera
 type: person
 company: acme-corp  # DEPRECATED
 ```
 
 **After:**
 ```yaml
-id: pete_wagner
-name: Pete Wagner
+id: sam_rivera
+name: Sam Rivera
 type: person
 relationships:
   - uri: redaksjon://company/acme-corp
@@ -235,7 +235,7 @@ name: Cloud Migration
 type: project
 classification:
   associated_people:  # DEPRECATED
-    - pete_wagner
+    - sam_rivera
     - jane_smith
 ```
 
@@ -245,7 +245,7 @@ id: cloud-migration
 name: Cloud Migration
 type: project
 relationships:
-  - uri: redaksjon://person/pete_wagner
+  - uri: redaksjon://person/sam_rivera
     relationship: team_member
   - uri: redaksjon://person/jane_smith
     relationship: team_member
@@ -256,7 +256,7 @@ relationships:
 ### Find all companies a person works at
 
 ```typescript
-const person = await context.get('person', 'pete_wagner');
+const person = await context.get('person', 'sam_rivera');
 const companies = person.relationships
   ?.filter(r => r.relationship === 'works_at')
   .map(r => parseEntityUri(r.uri))
